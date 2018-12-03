@@ -4,6 +4,8 @@
 
 Based on given Chinese documents, develop a simplified automatic question answering system (DBQA) and  for each sentence in the document output a decimal number ranging in `[0, 1]` representing how likely the sentence is containing the correct answer to the given question.
 
+This task is very similar to [MSRA's Beauty of Programming Contest](https://studentclub.msra.cn/bop2017/rules/qualification).
+
 ### Training/Validation data
 
 Training set: 264416 samples
