@@ -1,9 +1,11 @@
 import numpy as np
-
+import os
 import keras
 from keras.models import Sequential, Model
 from keras.layers import Input, Embedding, Dense, Flatten, Conv1D, MaxPooling1D
+from keras.callbacks import ModelCheckpoint
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 def build_model(embedding_matrix):
     
     embedding_layer = Embedding(185674, 300, weights=[embedding_matrix], input_length=2000, trainable=False)
@@ -34,8 +36,10 @@ if __name__ == "__main__":
     Y_val = np.load('../data/numpy_array/validation_label.npy')
     embedding_matrix = np.load('../data/numpy_array/word_vector.npy')
     
+    filepath='../model/model_{epoch:02d}-{val_acc:.2f}.hdf5'
+    checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=0, save_best_only=False, save_weights_only=False, mode='auto', period=1)
     model = build_model(embedding_matrix)
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['acc'])
-    model.fit(X_train, Y_train, validation_data=(X_val, Y_val), epochs=10, batch_size=100)
+    model.fit(X_train, Y_train, validation_data=(X_val, Y_val), callbacks=[checkpoint], epochs=3, batch_size=100)
         
     
