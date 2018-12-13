@@ -48,7 +48,6 @@ print(len(num))
 X_val_Q = X_val_Q[:,:200]
 X_val_A = X_val_A[:,:200]
 
-X_val = np.concatenate((X_val_Q, X_val_A), axis=1)
 Y_val = np.load('../data/numpy_array/validation_label.npy')
 
 count = 0
@@ -64,9 +63,12 @@ model_list = os.listdir('../model/net_model')
 
 for i in model_list:
     model_name = '../model/net_model/' + i
+    print(model_name)
     model = load_model(model_name)
 
-    result = np.array(model.predict(X_val, 100))
+    #model.summary()
+
+    result = model.predict([X_val_Q, X_val_A])
     result = result.reshape(result.shape[0])
 
     mrr = MRR(result, Y_val)
