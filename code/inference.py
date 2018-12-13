@@ -4,6 +4,22 @@ import keras
 from keras import backend as K
 from keras.models import load_model
 
+def MRR(pred, label):
+    global num
+    Q = len(num)
+    mrr = 0
+    index = 0
+    for i in num:
+        tmp_pred = pred[index:index + i]
+        tmp_label = label[index:index + i]
+        true_index = np.argmax(tmp_label)
+        tmp_pred = np.argsort(-tmp_pred)
+        rank = np.argwhere(tmp_pred == true_index)[0] + 1
+        mrr += 1/rank
+        index += i
+    mrr /= Q
+    return mrr
+    
 #os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 #model = load_model('../model/model_01-0.96.hdf5')
