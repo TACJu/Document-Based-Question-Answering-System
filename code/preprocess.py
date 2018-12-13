@@ -133,7 +133,7 @@ def build_matrix():
         line = file.readline()
         if not line:
             break
-        d.append(line)
+        d.append(line[:-1])
     file.close()
 
     for phase in ['train', 'validation']:
@@ -163,15 +163,13 @@ def build_matrix():
             np.save(savename, index)
 
 def test():
-    validation_Q = np.load('../data/numpy_array/validation_Q_index.npy')
-    print(validation_Q.shape)
-    validation_A = np.load('../data/numpy_array/validation_A_index.npy')
-    print(validation_A.shape)
+    model = word2vec.Word2Vec.load('../model/word2vec.model')
+    print(model.wv['年'])
 
 if __name__ == "__main__":
     #process()
     #cut()
     #embedding()
     #inference()
-    #build_matrix()
-    test()
+    build_matrix()
+    #test()
