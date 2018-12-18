@@ -19,7 +19,7 @@ def build_model(embedding_matrix):
     left = Conv1D(64, kernel_size, activation='relu', padding='causal')(left_sequences)
     left = AveragePooling1D(kernel_size)(left)
     left = Conv1D(64, kernel_size, activation='relu', padding='causal')(left)
-    left = AveragePooling1D(input_length + kernel_size - 1)(left)
+    left = AveragePooling1D(40)(left)
     left = Flatten()(left)
 
     right_embedding = Embedding(185674, 300, weights=[embedding_matrix], input_length=input_length, trainable=False)
