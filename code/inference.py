@@ -152,7 +152,7 @@ for i in model_list:
     #result = model.predict([X_val_Q, X_val_A])
     result = model.predict([X_val], 128)
     result = result.reshape(result.shape[0])
-    file = open('../data/result/han_score.txt')
+    file = open('../data/result/han_score.txt', 'w')
     for i in result:
         file.write(str(i) + '\n')
     file.close()
