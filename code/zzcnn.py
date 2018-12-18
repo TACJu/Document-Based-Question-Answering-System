@@ -3,7 +3,7 @@ import os
 import tensorflow as tf
 from tensorflow import keras
 from keras.models import Sequential, Model
-from keras.layers import Input, Embedding, Dense, Flatten, Conv1D, MaxPooling1D, Concatenate, Dot
+from keras.layers import Input, Embedding, Dense, Flatten, Conv1D, MaxPooling1D, Concatenate, Dot, AveragePooling1D
 from keras.engine.topology import Layer
 from keras import backend as K
 from keras.callbacks import ModelCheckpoint
@@ -11,6 +11,8 @@ import numpy as np
 batch_size = 128
 input_length = 200
 kernel_size = 5
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "7"
 
 def build_model(embedding_matrix):
                         
@@ -40,11 +42,11 @@ def build_model(embedding_matrix):
     # The more, the better?
     Q = Flatten()(Q)
 
-    left = Dense(2560, use_bias=False)(Q)
+    left = Dense(512, use_bias=False)(Q)
     sim = Dot(1)([left, D])
 
     # new sim, change the operation order
-    new_left = Dense(2560, use_bias=False)(D)
+    new_left = Dense(512, use_bias=False)(D)
     new_sim = Dot(1)([new_left, Q])
     concat = Concatenate()([Q, D, sim, new_sim])
     # new sim, change the operation order
