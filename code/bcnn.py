@@ -28,7 +28,7 @@ def build_model(embedding_matrix):
     right = Conv1D(64, kernel_size, activation='relu', padding='causal')(right_sequences)
     right = AveragePooling1D(kernel_size)(right)
     right = Conv1D(64, kernel_size, activation='relu', padding='causal')(right)
-    right = AveragePooling1D(input_length + kernel_size - 1)(right)
+    right = AveragePooling1D(40)(right)
     right = Flatten()(right)
 
     #  note that abcnn use all-ap average pooling in the last, which should be followed by a logistic regression,
