@@ -10,7 +10,7 @@ from keras.callbacks import TensorBoard, ModelCheckpoint
 from keras.models import load_model
 from keras.utils import CustomObjectScope
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+#os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 def dot_product(x, kernel):
     if K.backend() == 'tensorflow':
@@ -152,7 +152,7 @@ for i in model_list:
     #result = model.predict([X_val_Q, X_val_A])
     result = model.predict([X_val], 128)
     result = result.reshape(result.shape[0])
-    file = open('../data/result/han_score.txt', 'w')
+    file = open('../data/result/' + i + '_score.txt', 'w')
     for i in result:
         file.write(str(i) + '\n')
     file.close()

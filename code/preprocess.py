@@ -88,14 +88,40 @@ def cut():
     input_file.close()
     output_file.close()
 
+def cut_ori():
+    input_file_name = ['../data/split_data/train_A.txt', '../data/split_data/train_Q.txt', '../data/split_data/validation_A.txt', '../data/split_data/validation_Q.txt']
+    output_file = open('../data/split_data/tv_cut.txt', 'w')
+
+    for name in input_file_name:
+        input_file = open(name, 'r')
+        while True:
+            line = input_file.readline()
+            if not line:
+                break
+            
+            cut = jieba.cut(line)
+            for word in cut:
+                match = zhPattern.search(word)
+                if match or word  == '\n':
+                    if word != '\n':
+                        output_file.write(word + ' ')
+                    else:
+                        output_file.write('\n')
+    
+    input_file.close()
+    output_file.close()
+
+def tfidv():
+    
+
 def embedding():
-    sentence = word2vec.LineSentence('../data/wiki_cut.txt')
+    sentence = word2vec.LineSentence('../data/split_data/tv_cut.txt')
     model = word2vec.Word2Vec(sentences=sentence, min_count=5, window=5, iter=3, size=300)
-    model.save('../model/word2vec.model')
+    model.save('../model/new_word2vec.model')
 
 def inference():
-    model = word2vec.Word2Vec.load('../model/word2vec.model')
-    outfile = open('../data/split_data/words.txt', 'w')
+    model = word2vec.Word2Vec.load('../model/new_word2vec.model')
+    outfile = open('../data/split_data/new_words.txt', 'w')
     d = []
     maxlen = 0
     word_vector = []
@@ -122,7 +148,7 @@ def inference():
                         word_vector.append(model.wv[word])
             file.close()
     outfile.close()
-    np.save('../data/numpy_array/word_vector.npy', word_vector)
+    np.save('../data/numpy_array/new_word_vector.npy', word_vector)
     print(maxlen)
 
 def build_matrix():
@@ -148,18 +174,18 @@ def build_matrix():
                 print(filename, line_count)
                 if not line:
                     break
-                tmp = np.zeros((1000))
+                tmp = np.zeros((200))
                 word_count = 0
                 words = line.split()
                 for word in words:
                     if word in d:
-                        if word_count >= 1000:
+                        if word_count >= 200:
                             break
                         tmp[word_count] = d.index(word)
                         word_count += 1
                 index.append(tmp)
             index = np.array(index)
-            savename = '../data/numpy_array/' + phase + '_' + mode + '_index.npy'
+            savename = '../data/numpy_array/new_' + phase + '_' + mode + '_index.npy'
             np.save(savename, index)
 
 def test():
@@ -169,7 +195,8 @@ def test():
 if __name__ == "__main__":
     #process()
     #cut()
-    #embedding()
-    #inference()
+    cut_ori()
+    embedding()
+    inference()
     build_matrix()
     #test()
