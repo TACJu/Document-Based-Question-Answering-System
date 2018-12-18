@@ -1,5 +1,6 @@
 import numpy as np
 import os
+
 import keras
 from keras import backend as K
 from keras import initializers,regularizers,constraints
@@ -7,8 +8,6 @@ from keras.models import Model
 from keras.engine.topology import Layer
 from keras.layers import Dense, Input, Embedding, GRU, Bidirectional, TimeDistributed
 from keras.callbacks import TensorBoard, ModelCheckpoint
-from keras.models import load_model
-from keras.utils import CustomObjectScope
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
@@ -86,76 +85,49 @@ class Attention(Layer):
     def compute_output_shape(self, input_shape):
         return input_shape[0], input_shape[-1]
 
-def MRR(pred, label):
-    global num
-    Q = len(num)
-    mrr = 0
-    index = 0
-    for i in num:
-        tmp_pred = pred[index:index + i]
-        tmp_label = label[index:index + i]
-        true_index = np.argmax(tmp_label)
-        tmp_rank = np.argsort(-tmp_pred)
-        rank = np.argwhere(tmp_rank == true_index)[0][0] + 1
-        mrr += 1/rank
-        index += i
-    mrr /= Q
-    return mrr
+def build_model(embedding_matrix):
+    
+    embedding_layer = Embedding(185674, 300, weights=[embedding_matrix], input_length=400, trainable=False, mask_zero=True)
 
-X_val_Q = np.load('../data/numpy_array/validation_Q_index.npy')
-X_val_A = np.load('../data/numpy_array/validation_A_index.npy')
-num = []
+    word_input = Input(shape=(400,), dtype='int32')
+    embedded_sequences = embedding_layer(word_input)
+    lstm_word = Bidirectional(GRU(100, return_sequences=True))(embedded_sequences)
+    #word_dense = TimeDistributed(Dense(200))(lstm_word)
+    attn_word = Attention()(lstm_word)
+    sentenceEncoder = Model(word_input, attn_word)
 
-length = len(X_val_Q)
-print(length)
-count = 1
-for i in range(length):
-    if i == 0:
-        continue
-    else:
-        if (X_val_Q[i - 1] == X_val_Q[i]).all() == True:
-            count += 1
-            if i == length - 1:
-                num.append(count)
-        else:
-            num.append(count)
-            count = 1
+    sentence_input = Input(shape=(1, 400), dtype='int32')
+    sentence_encoder = TimeDistributed(sentenceEncoder)(sentence_input)
+    lstm_sentence = Bidirectional(GRU(100, return_sequences=True))(sentence_encoder)
+    #sentence_dense = TimeDistributed(Dense(200))(lstm_word)
+    attn_sentence = Attention()(lstm_sentence)
+    pred = Dense(1, activation='sigmoid')(attn_sentence)
+    model = Model(sentence_input, pred)
 
-num = np.array(num)    
-print(len(num))
+    model.summary()
+    return model
 
-X_val_Q = X_val_Q[:,:200]
-X_val_A = X_val_A[:,:200]
-X_val = np.concatenate((X_val_Q, X_val_A), axis=1)
-X_val = np.expand_dims(X_val, axis=1)
+if __name__ == "__main__":
 
-Y_val = np.load('../data/numpy_array/validation_label.npy')
+    X_train_Q = np.load('../data/numpy_array/train_Q_index.npy')
+    X_train_A = np.load('../data/numpy_array/train_A_index.npy')
+    X_train_Q = X_train_Q[:,:200]
+    X_train_A = X_train_A[:,:200]
+    X_train = np.concatenate((X_train_Q, X_train_A), axis=1)
+    X_val_Q = np.load('../data/numpy_array/validation_Q_index.npy')
+    X_val_A = np.load('../data/numpy_array/validation_A_index.npy')
+    X_val_Q = X_val_Q[:,:200]
+    X_val_A = X_val_A[:,:200]
+    X_val = np.concatenate((X_val_Q, X_val_A), axis=1)
+    X_train = np.expand_dims(X_train, axis=1)
+    X_val = np.expand_dims(X_val, axis=1)
+    Y_train = np.load('../data/numpy_array/train_label.npy')
+    Y_val = np.load('../data/numpy_array/validation_label.npy')
+    embedding_matrix = np.load('../data/numpy_array/word_vector.npy')
 
-count = 0
-zero_count = 0
-for i in range(len(Y_val)):
-    if Y_val[i] == 1:
-        count += 1
-    else:
-        zero_count += 1
-print(count, zero_count)
-
-model_list = os.listdir('../model/net_model')
-
-for i in model_list:
-    model_name = '../model/net_model/' + i
-    with CustomObjectScope({'Attention': Attention()}):
-        model = load_model(model_name)
-
-    #model.summary()
-
-    #result = model.predict([X_val_Q, X_val_A])
-    result = model.predict([X_val], 128)
-    result = result.reshape(result.shape[0])
-    file = open('../data/result/han_score.txt')
-    for i in result:
-        file.write(str(i) + '\n')
-    file.close()
-
-    mrr = MRR(result, Y_val)
-    print(model_name, mrr)
+    cw = {0:1, 1:20}
+    filepath='../model/net_model/model_{epoch:02d}-{val_acc:.2f}.hdf5'
+    checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=0, save_best_only=False, save_weights_only=False, mode='auto', period=1)
+    model = build_model(embedding_matrix)
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['acc'])
+    model.fit(X_train, Y_train, validation_data=(X_val, Y_val), callbacks=[checkpoint], epochs=10, batch_size=128, class_weight=cw)

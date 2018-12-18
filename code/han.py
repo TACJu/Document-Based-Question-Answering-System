@@ -4,9 +4,9 @@ import os
 import keras
 from keras import backend as K
 from keras import initializers,regularizers,constraints
-from keras.models import Model
+from keras.models import Model, Sequential
 from keras.engine.topology import Layer
-from keras.layers import Dense, Input, Embedding, GRU, Bidirectional, TimeDistributed
+from keras.layers import Dense, Input, Embedding, LSTM, GRU, Bidirectional, TimeDistributed, Concatenate, BatchNormalization
 from keras.callbacks import TensorBoard, ModelCheckpoint
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "2"
@@ -87,22 +87,26 @@ class Attention(Layer):
 
 def build_model(embedding_matrix):
     
-    embedding_layer = Embedding(185674, 300, weights=[embedding_matrix], input_length=400, trainable=True, mask_zero=True)
+    embedding_layer = Embedding(185674, 300, weights=[embedding_matrix], input_length=200, trainable=False, mask_zero=True)
 
-    word_input = Input(shape=(400,), dtype='int32')
-    embedded_sequences = embedding_layer(word_input)
-    lstm_word = Bidirectional(GRU(100, return_sequences=True))(embedded_sequences)
-    #word_dense = TimeDistributed(Dense(200))(lstm_word)
-    attn_word = Attention()(lstm_word)
-    sentenceEncoder = Model(word_input, attn_word)
+    input_query = Input(shape=(200,), dtype='int32')
+    embedded_query = embedding_layer(input_query)
+    lstm_query = Bidirectional(LSTM(32, return_sequences=True))(embedded_query)
+    lstm_Q = Bidirectional(LSTM(32))(lstm_query)
+    #dense_query = TimeDistributed(Dense(200))(lstm_query)
+    #attn_query = Attention()(lstm_Q)
 
-    sentence_input = Input(shape=(1, 400), dtype='int32')
-    sentence_encoder = TimeDistributed(sentenceEncoder)(sentence_input)
-    lstm_sentence = Bidirectional(GRU(100, return_sequences=True))(sentence_encoder)
-    #sentence_dense = TimeDistributed(Dense(200))(lstm_word)
-    attn_sentence = Attention()(lstm_sentence)
-    pred = Dense(1, activation='sigmoid')(attn_sentence)
-    model = Model(sentence_input, pred)
+    input_answer = Input(shape=(200,), dtype='int32')
+    embedding_answer = embedding_layer(input_answer)
+    lstm_answer = Bidirectional(LSTM(32, return_sequences=True))(embedding_answer)
+    lstm_A = Bidirectional(LSTM(32))(lstm_answer)
+    #dense_answer = TimeDistributed(Dense(200))(lstm_answer)
+    #attn_answer = Attention()(lstm_A)
+
+    concat = Concatenate()([lstm_Q, lstm_A])
+    x = Dense(128, activation='relu')(concat)
+    pred = Dense(1, activation='sigmoid')(x)
+    model = Model([input_query, input_answer], pred)
 
     model.summary()
     return model
@@ -113,14 +117,14 @@ if __name__ == "__main__":
     X_train_A = np.load('../data/numpy_array/train_A_index.npy')
     X_train_Q = X_train_Q[:,:200]
     X_train_A = X_train_A[:,:200]
-    X_train = np.concatenate((X_train_Q, X_train_A), axis=1)
+    #X_train = np.concatenate((X_train_Q, X_train_A), axis=1)
     X_val_Q = np.load('../data/numpy_array/validation_Q_index.npy')
     X_val_A = np.load('../data/numpy_array/validation_A_index.npy')
     X_val_Q = X_val_Q[:,:200]
     X_val_A = X_val_A[:,:200]
-    X_val = np.concatenate((X_val_Q, X_val_A), axis=1)
-    X_train = np.expand_dims(X_train, axis=1)
-    X_val = np.expand_dims(X_val, axis=1)
+    #X_val = np.concatenate((X_val_Q, X_val_A), axis=1)
+    #X_train = np.expand_dims(X_train, axis=1)
+    #X_val = np.expand_dims(X_val, axis=1)
     Y_train = np.load('../data/numpy_array/train_label.npy')
     Y_val = np.load('../data/numpy_array/validation_label.npy')
     embedding_matrix = np.load('../data/numpy_array/word_vector.npy')
@@ -130,4 +134,4 @@ if __name__ == "__main__":
     checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=0, save_best_only=False, save_weights_only=False, mode='auto', period=1)
     model = build_model(embedding_matrix)
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['acc'])
-    model.fit(X_train, Y_train, validation_data=(X_val, Y_val), callbacks=[checkpoint], epochs=10, batch_size=100, class_weight=cw)
+    model.fit([X_train_Q, X_train_A], Y_train, validation_data=([X_val_Q, X_val_A], Y_val), callbacks=[checkpoint], epochs=10, batch_size=128, class_weight=cw)
