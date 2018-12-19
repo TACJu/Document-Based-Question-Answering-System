@@ -10,7 +10,7 @@ from keras.callbacks import TensorBoard, ModelCheckpoint
 from keras.models import load_model
 from keras.utils import CustomObjectScope
 
-#os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 def dot_product(x, kernel):
     if K.backend() == 'tensorflow':
@@ -126,8 +126,8 @@ print(len(num))
 
 X_val_Q = X_val_Q[:,:200]
 X_val_A = X_val_A[:,:200]
-X_val = np.concatenate((X_val_Q, X_val_A), axis=1)
-X_val = np.expand_dims(X_val, axis=1)
+#X_val = np.concatenate((X_val_Q, X_val_A), axis=1)
+#X_val = np.expand_dims(X_val, axis=1)
 
 Y_val = np.load('../data/numpy_array/validation_label.npy')
 
@@ -140,22 +140,23 @@ for i in range(len(Y_val)):
         zero_count += 1
 print(count, zero_count)
 
-model_list = os.listdir('../model/net_model')
+model_list = os.listdir('../model/rcnn_attention_model')
 
 for i in model_list:
-    model_name = '../model/net_model/' + i
+    model_name = '../model/rcnn_attention_model/' + i
     with CustomObjectScope({'Attention': Attention()}):
         model = load_model(model_name)
-
+    #model = load_model(model_name)
     #model.summary()
 
-    #result = model.predict([X_val_Q, X_val_A])
-    result = model.predict([X_val], 128)
+    result = model.predict([X_val_Q, X_val_A], 128)
+    #result = model.predict([X_val], 128)
     result = result.reshape(result.shape[0])
+    '''
     file = open('../data/result/' + i + '_score.txt', 'w')
     for i in result:
         file.write(str(i) + '\n')
     file.close()
-
+    '''
     mrr = MRR(result, Y_val)
     print(model_name, mrr)

@@ -42,14 +42,14 @@ input_length = 200
 
 def build_model(embedding_matrix):
                         
-    doc_embedding = Embedding(185674, 300, weights=[embedding_matrix], input_length=input_length, trainable=False)
+    doc_embedding = Embedding(74925, 300, weights=[embedding_matrix], input_length=input_length, trainable=False)
     doc_input = Input(shape=(input_length,), dtype='int32')
     doc_sequences = doc_embedding(doc_input)
     D = Conv1D(64, 5, activation='relu', padding='same')(doc_sequences)
     D = MaxPooling1D(5)(D)
     D = Flatten()(D)
 
-    query_embedding = Embedding(185674, 300, weights=[embedding_matrix], input_length=input_length, trainable=False)
+    query_embedding = Embedding(74925, 300, weights=[embedding_matrix], input_length=input_length, trainable=False)
     query_input = Input(shape=(input_length,), dtype='int32')
     query_sequences = query_embedding(query_input)
     Q = Conv1D(64, 5, activation='relu', padding='same')(query_sequences)
@@ -70,20 +70,20 @@ def build_model(embedding_matrix):
 
 if __name__ == "__main__":
 
-    X_train_Q = np.load('../data/numpy_array/train_Q_index.npy') # shape (264416, 1000)
-    X_train_A = np.load('../data/numpy_array/train_A_index.npy')
-    X_train_Q = X_train_Q[:,:200]
-    X_train_A = X_train_A[:,:200]
+    X_train_Q = np.load('../data/numpy_array/new_train_Q_index.npy') # shape (264416, 1000)
+    X_train_A = np.load('../data/numpy_array/new_train_A_index.npy')
+    #X_train_Q = X_train_Q[:,:200]
+    #X_train_A = X_train_A[:,:200]
     
     #X_train = np.concatenate((X_train_Q, X_train_A), axis=1)
-    X_val_Q = np.load('../data/numpy_array/validation_Q_index.npy')
-    X_val_A = np.load('../data/numpy_array/validation_A_index.npy')
-    X_val_Q = X_val_Q[:,:200]
-    X_val_A = X_val_A[:,:200]
+    X_val_Q = np.load('../data/numpy_array/new_validation_Q_index.npy')
+    X_val_A = np.load('../data/numpy_array/new_validation_A_index.npy')
+    #X_val_Q = X_val_Q[:,:200]
+    #X_val_A = X_val_A[:,:200]
     #X_val = np.concatenate((X_val_Q, X_val_A), axis=1)
     Y_train = np.load('../data/numpy_array/train_label.npy')
     Y_val = np.load('../data/numpy_array/validation_label.npy')
-    embedding_matrix = np.load('../data/numpy_array/word_vector.npy')
+    embedding_matrix = np.load('../data/numpy_array/new_word_vector.npy')
     
     cw = {0:1, 1:20}
     filepath='../model/net_model/model_{epoch:02d}-{val_acc:.2f}.hdf5'

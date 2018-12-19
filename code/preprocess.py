@@ -110,8 +110,6 @@ def cut_ori():
     
     input_file.close()
     output_file.close()
-
-def tfidv():
     
 
 def embedding():
@@ -152,7 +150,7 @@ def inference():
     print(maxlen)
 
 def build_matrix():
-    file = open('../data/split_data/words.txt', 'r')
+    file = open('../data/split_data/new_words.txt', 'r')
     d = []
     d.append('')
     while True:
@@ -195,8 +193,8 @@ def test():
 if __name__ == "__main__":
     #process()
     #cut()
-    cut_ori()
-    embedding()
-    inference()
+    #cut_ori()
+    #embedding()
+    #inference()
     build_matrix()
     #test()

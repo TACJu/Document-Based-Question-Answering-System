@@ -6,12 +6,12 @@ from keras import backend as K
 from keras import initializers,regularizers,constraints
 from keras.models import Model, Sequential
 from keras.engine.topology import Layer
-from keras.layers import Dense, Input, Embedding, LSTM, GRU, Bidirectional, TimeDistributed, Concatenate, BatchNormalization, Lambda
+from keras.layers import Flatten, Dense, Input, Embedding, LSTM, GRU, Bidirectional, TimeDistributed, Concatenate, BatchNormalization, Lambda, Conv1D, MaxPooling1D                                                                                                                                                                                                                                                                                                                                                                                                                                                
 from keras.callbacks import TensorBoard, ModelCheckpoint
 from keras.models import load_model
 from keras.utils import CustomObjectScope
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "7"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 def dot_product(x, kernel):
     if K.backend() == 'tensorflow':
@@ -92,11 +92,17 @@ def build_model(embedding_matrix):
     embedding_layer = Embedding(185674, 300, weights=[embedding_matrix], input_length=200, trainable=False)
 
     input_query = Input(shape=(200,), dtype='int32')
-    embedded_query = embedding_layer(input_query)
-    lstm_query = Bidirectional(GRU(100, return_sequences=True))(embedded_query)
+    embedding_query = embedding_layer(input_query)
+    lstm_query = Bidirectional(GRU(100, return_sequences=True))(embedding_query)
     lstm_Q = Bidirectional(GRU(100, return_sequences=True))(lstm_query)
     #dense_query = TimeDistributed(Dense(200))(lstm_query)
     attn_query = Attention()(lstm_Q)
+
+    Q = Conv1D(64, 5, activation='relu', padding='same')(embedding_query)
+    Q = MaxPooling1D(5)(Q)
+    Q = Conv1D(64, 5, activation='relu', padding='same')(Q)
+    Q = MaxPooling1D(5)(Q)
+    Q = Flatten()(Q)
 
     input_answer = Input(shape=(200,), dtype='int32')
     embedding_answer = embedding_layer(input_answer)
@@ -104,9 +110,16 @@ def build_model(embedding_matrix):
     lstm_A = Bidirectional(GRU(100, return_sequences=True))(lstm_answer)
     #dense_answer = TimeDistributed(Dense(200))(lstm_answer)
     attn_answer = Attention()(lstm_A)
+    
+    A = Conv1D(64, 5, activation='relu', padding='same')(embedding_answer)
+    A = MaxPooling1D(5)(A)
+    A = Conv1D(64, 5, activation='relu', padding='same')(A)
+    A = MaxPooling1D(5)(A)
+    A = Flatten()(A)
 
-    concat = Concatenate()([attn_query, attn_answer])
-    x = Lambda(lambda y:1-y)(concat)
+    concat = Concatenate()([attn_query, Q, attn_answer, A])
+    #x = Lambda(lambda y:1-y)(concat)
+    x = Dense(256, activation='relu')(concat)
     x = Dense(128, activation='relu')(x)
     pred = Dense(1, activation='sigmoid')(x)
     model = Model([input_query, input_answer], pred)
@@ -133,10 +146,10 @@ if __name__ == "__main__":
     embedding_matrix = np.load('../data/numpy_array/word_vector.npy')
 
     cw = {0:1, 1:20}
-    filepath='../model/attention_model/model_{epoch:02d}-{val_acc:.2f}.hdf5'
+    filepath='../model/rcnn_model/model_{epoch:02d}-{val_acc:.2f}.hdf5'
     checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=0, save_best_only=False, save_weights_only=False, mode='auto', period=1)
     #model = build_model(embedding_matrix)
     with CustomObjectScope({'Attention': Attention()}):
-        model = load_model('../model/attention_model/model_07-0.82.hdf5')
+        model = load_model('../model/rcnn_model/model_05-0.71.hdf5')
     #model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['acc'])
-    model.fit([X_train_Q, X_train_A], Y_train, validation_data=([X_val_Q, X_val_A], Y_val), callbacks=[checkpoint], epochs=13, batch_size=128, class_weight=cw)
+    model.fit([X_train_Q, X_train_A], Y_train, validation_data=([X_val_Q, X_val_A], Y_val), callbacks=[checkpoint], epochs=15, batch_size=128, class_weight=cw)
