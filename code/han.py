@@ -6,8 +6,10 @@ from keras import backend as K
 from keras import initializers,regularizers,constraints
 from keras.models import Model, Sequential
 from keras.engine.topology import Layer
-from keras.layers import Dense, Input, Embedding, LSTM, GRU, Bidirectional, TimeDistributed, Concatenate, BatchNormalization
+from keras.layers import Dense, Input, Embedding, LSTM, GRU, Bidirectional, TimeDistributed, Concatenate, BatchNormalization, Lambda
 from keras.callbacks import TensorBoard, ModelCheckpoint
+from keras.models import load_model
+from keras.utils import CustomObjectScope
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
@@ -92,19 +94,20 @@ def build_model(embedding_matrix):
     input_query = Input(shape=(200,), dtype='int32')
     embedded_query = embedding_layer(input_query)
     lstm_query = Bidirectional(LSTM(32, return_sequences=True))(embedded_query)
-    lstm_Q = Bidirectional(LSTM(32))(lstm_query)
+    #lstm_Q = Bidirectional(LSTM(32))(lstm_query)
     #dense_query = TimeDistributed(Dense(200))(lstm_query)
-    #attn_query = Attention()(lstm_Q)
+    attn_query = Attention()(lstm_query)
 
     input_answer = Input(shape=(200,), dtype='int32')
     embedding_answer = embedding_layer(input_answer)
     lstm_answer = Bidirectional(LSTM(32, return_sequences=True))(embedding_answer)
-    lstm_A = Bidirectional(LSTM(32))(lstm_answer)
+    #lstm_A = Bidirectional(LSTM(32))(lstm_answer)
     #dense_answer = TimeDistributed(Dense(200))(lstm_answer)
-    #attn_answer = Attention()(lstm_A)
+    attn_answer = Attention()(lstm_answer)
 
-    concat = Concatenate()([lstm_Q, lstm_A])
-    x = Dense(128, activation='relu')(concat)
+    concat = Concatenate()([attn_query, attn_answer])
+    x = Lambda(lambda y:1-y)(concat)
+    x = Dense(128, activation='relu')(x)
     pred = Dense(1, activation='sigmoid')(x)
     model = Model([input_query, input_answer], pred)
 
@@ -130,8 +133,10 @@ if __name__ == "__main__":
     embedding_matrix = np.load('../data/numpy_array/word_vector.npy')
 
     cw = {0:1, 1:20}
-    filepath='../model/net_model/model_{epoch:02d}-{val_acc:.2f}.hdf5'
+    filepath='../model/net_model_tmp/model_{epoch:02d}-{val_acc:.2f}.hdf5'
     checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=0, save_best_only=False, save_weights_only=False, mode='auto', period=1)
-    model = build_model(embedding_matrix)
-    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['acc'])
+    #model = build_model(embedding_matrix)
+    with CustomObjectScope({'Attention': Attention()}):
+        model = load_model('../model/net_model/model_10-0.84.hdf5')
+    #model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['acc'])
     model.fit([X_train_Q, X_train_A], Y_train, validation_data=([X_val_Q, X_val_A], Y_val), callbacks=[checkpoint], epochs=10, batch_size=128, class_weight=cw)
