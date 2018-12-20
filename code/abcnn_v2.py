@@ -127,10 +127,6 @@ def ABCNN(
     left_sentence_representations.append(GlobalAveragePooling1D()(conv_left))
     right_sentence_representations.append(GlobalAveragePooling1D()(conv_right))
 
-    # ###################### #
-    # ### END OF ABCNN-2 ### #
-    # ###################### #
-
     # Merge collected sentence representations if necessary
     left_sentence_rep = left_sentence_representations.pop(-1)
     if left_sentence_representations:
@@ -146,7 +142,6 @@ def ABCNN(
     # Add logistic regression on top.
     classify = Dense(1, activation="sigmoid")(global_representation)
     model = Model([left_input, right_input], outputs=classify)
-    # model.summary()
     return model
 
 if __name__ == "__main__":
@@ -168,7 +163,7 @@ if __name__ == "__main__":
     embedding_matrix = np.load('../data/numpy_array/word_vector.npy')
 
     cw = {0: 1, 1: 20}
-    filepath = '../model/short_net_model/model_{epoch:02d}-{val_acc:.2f}.hdf5'
+    filepath = '../model/new_net_model/model_{epoch:02d}-{val_acc:.2f}.hdf5'
     checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=0, save_best_only=False, save_weights_only=False,
                                  mode='auto', period=1)
 
