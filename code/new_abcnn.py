@@ -5,7 +5,7 @@ from keras import initializers,regularizers,constraints
 from keras import backend as K
 from keras.models import Sequential, Model
 from keras.engine.topology import Layer
-from keras.layers import Input, Embedding, Dense, Flatten, Conv1D, AveragePooling1D, Concatenate, Dot, Permute
+from keras.layers import Input, Embedding, Dense, Flatten, Conv1D, AveragePooling1D, Concatenate, Dot, Permute, LSTM, GRU, Bidirectional
 from keras.callbacks import ModelCheckpoint
 import numpy as np
 
@@ -13,14 +13,81 @@ batch_size = 128
 input_length = 200
 kernel_size = 5
 
-# os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-def dot_product(x, y):
+def dot_product(x, kernel):
     if K.backend() == 'tensorflow':
-        return K.squeeze(K.dot(x, K.expand_dims(y)), axis=-1)
+        return K.squeeze(K.dot(x, K.expand_dims(kernel)), axis=-1)
     else:
-        return K.dot(x, y)
+        return K.dot(x, kernel)
 
+class Attention(Layer):
+    def __init__(self,
+                 W_regularizer=None, u_regularizer=None, b_regularizer=None,
+                 W_constraint=None, u_constraint=None, b_constraint=None,
+                 bias=True, **kwargs):
+
+        self.supports_masking = True
+        self.init = initializers.get('glorot_uniform')
+
+        self.W_regularizer = regularizers.get(W_regularizer)
+        self.u_regularizer = regularizers.get(u_regularizer)
+        self.b_regularizer = regularizers.get(b_regularizer)
+
+        self.W_constraint = constraints.get(W_constraint)
+        self.u_constraint = constraints.get(u_constraint)
+        self.b_constraint = constraints.get(b_constraint)
+
+        self.bias = bias
+        super(Attention, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        assert len(input_shape) == 3
+
+        self.W = self.add_weight((input_shape[-1], input_shape[-1],),
+                                 initializer=self.init,
+                                 name='{}_W'.format(self.name),
+                                 regularizer=self.W_regularizer,
+                                 constraint=self.W_constraint)
+        if self.bias:
+            self.b = self.add_weight((input_shape[-1],),
+                                     initializer='zero',
+                                     name='{}_b'.format(self.name),
+                                     regularizer=self.b_regularizer,
+                                     constraint=self.b_constraint)
+
+        self.u = self.add_weight((input_shape[-1],),
+                                 initializer=self.init,
+                                 name='{}_u'.format(self.name),
+                                 regularizer=self.u_regularizer,
+                                 constraint=self.u_constraint)
+
+        super(Attention, self).build(input_shape)
+
+    def compute_mask(self, input, input_mask=None):
+        return None
+
+    def call(self, x, mask=None):
+        uit = dot_product(x, self.W)
+
+        if self.bias:
+            uit += self.b
+
+        uit = K.tanh(uit)
+        ait = dot_product(uit, self.u)
+
+        a = K.exp(ait)
+
+        if mask is not None:
+            a *= K.cast(mask, K.floatx())
+        a /= K.cast(K.sum(a, axis=1, keepdims=True) + K.epsilon(), K.floatx())
+
+        a = K.expand_dims(a)
+        weighted_input = x * a
+        return K.sum(weighted_input, axis=1)
+
+    def compute_output_shape(self, input_shape):
+        return input_shape[0], input_shape[-1]
 
 class Attention_matrix(Layer):
     def build(self, input_shape):
@@ -78,10 +145,16 @@ def build_model(embedding_matrix):
     left_embedding = Embedding(185674, 300, weights=[embedding_matrix], input_length=input_length, trainable=False)
     left_input = Input(shape=(input_length,), dtype='int32')
     left_sequences = left_embedding(left_input)
+    lstm_query = Bidirectional(GRU(100, return_sequences=True))(left_sequences)
+    lstm_Q = Bidirectional(GRU(100, return_sequences=True))(lstm_query)
+    attn_query = Attention()(lstm_Q)
 
     right_embedding = Embedding(185674, 300, weights=[embedding_matrix], input_length=input_length, trainable=False)
     right_input = Input(shape=(input_length,), dtype='int32')
     right_sequences = right_embedding(right_input)
+    lstm_answer = Bidirectional(GRU(100, return_sequences=True))(right_sequences)
+    lstm_A = Bidirectional(GRU(100, return_sequences=True))(lstm_answer)
+    attn_answer = Attention()(lstm_A)
 
     # abcnn1
     A1 = Attention_matrix()([left_sequences, right_sequences])
@@ -110,14 +183,15 @@ def build_model(embedding_matrix):
     #  note that abcnn use all-ap average pooling in the last, which should be followed by a logistic regression,
     #  this process could be change to some more efficient way
     sim = Dot(1)([left, right])  # magical modified
-    concat = Concatenate()([left, right, sim])  # magical modified
+    concat = Concatenate()([left, attn_query, sim, right, attn_answer])  # magical modified
 
-    x = Dense(128, activation='relu')(concat)
+    x = Dense(256, activation='relu')(concat)
     x = Dense(128, activation='relu')(x)
 
     preds = Dense(1, activation='sigmoid')(x)
 
     model = Model([left_input, right_input], preds)
+    model.summary()
     return model
 
 
@@ -138,10 +212,10 @@ if __name__ == "__main__":
     embedding_matrix = np.load('../data/numpy_array/word_vector.npy')
 
     cw = {0: 1, 1: 20}
-    filepath = '../model/new_net_model/model_{epoch:02d}-{val_acc:.2f}.hdf5'
+    filepath = '../model/abcnn_model/model_{epoch:02d}-{val_acc:.2f}.hdf5'
     checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=0, save_best_only=False, save_weights_only=False,
                                  mode='auto', period=1)
     model = build_model(embedding_matrix)
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['acc'])
     model.fit([X_train_Q, X_train_A], Y_train, validation_data=([X_val_Q, X_val_A], Y_val), callbacks=[checkpoint],
-              epochs=10, batch_size=batch_size, class_weight=cw)
+              epochs=20, batch_size=batch_size, class_weight=cw)

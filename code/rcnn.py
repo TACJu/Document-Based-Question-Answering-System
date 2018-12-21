@@ -95,7 +95,6 @@ def build_model(embedding_matrix):
     embedding_query = embedding_layer(input_query)
     lstm_query = Bidirectional(GRU(100, return_sequences=True))(embedding_query)
     lstm_Q = Bidirectional(GRU(100, return_sequences=True))(lstm_query)
-    #dense_query = TimeDistributed(Dense(200))(lstm_query)
     attn_query = Attention()(lstm_Q)
 
     Q = Conv1D(64, 5, activation='relu', padding='same')(embedding_query)
@@ -108,7 +107,6 @@ def build_model(embedding_matrix):
     embedding_answer = embedding_layer(input_answer)
     lstm_answer = Bidirectional(GRU(100, return_sequences=True))(embedding_answer)
     lstm_A = Bidirectional(GRU(100, return_sequences=True))(lstm_answer)
-    #dense_answer = TimeDistributed(Dense(200))(lstm_answer)
     attn_answer = Attention()(lstm_A)
     
     A = Conv1D(64, 5, activation='relu', padding='same')(embedding_answer)

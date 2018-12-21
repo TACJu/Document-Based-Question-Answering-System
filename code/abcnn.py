@@ -13,7 +13,7 @@ batch_size = 128
 input_length = 200
 kernel_size = 5
 
-# os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 def dot_product(x, y):
     if K.backend() == 'tensorflow':
@@ -109,10 +109,10 @@ def build_model(embedding_matrix):
 
     #  note that abcnn use all-ap average pooling in the last, which should be followed by a logistic regression,
     #  this process could be change to some more efficient way
-    sim = Dot(1)([left, right])  # magical modified
-    concat = Concatenate()([left, right, sim])  # magical modified
+    # sim = Dot(1)([left, right])  # magical modified
+    concat = Concatenate()([left, right])  # magical modified
 
-    x = Dense(128, activation='relu')(concat)
+    x = Dense(256, activation='relu')(concat)
     x = Dense(128, activation='relu')(x)
 
     preds = Dense(1, activation='sigmoid')(x)
@@ -138,10 +138,10 @@ if __name__ == "__main__":
     embedding_matrix = np.load('../data/numpy_array/word_vector.npy')
 
     cw = {0: 1, 1: 20}
-    filepath = '../model/new_net_model/model_{epoch:02d}-{val_acc:.2f}.hdf5'
+    filepath = '../model/abc_model/model_{epoch:02d}-{val_acc:.2f}.hdf5'
     checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=0, save_best_only=False, save_weights_only=False,
                                  mode='auto', period=1)
     model = build_model(embedding_matrix)
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['acc'])
     model.fit([X_train_Q, X_train_A], Y_train, validation_data=([X_val_Q, X_val_A], Y_val), callbacks=[checkpoint],
-              epochs=10, batch_size=batch_size, class_weight=cw)
+              epochs=20, batch_size=batch_size, class_weight=cw)
