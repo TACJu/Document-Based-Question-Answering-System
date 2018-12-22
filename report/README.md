@@ -12,10 +12,10 @@ Repo链接为：https://github.com/TACJu/Document-Based-Question-Answering-Syste
 
 | 成员 | 分工 |
 | ---- | ---- |
-|      |      |
-|      |      |
-|      |      |
-|      |      |
+|   何炬   |   阅读论文，rnn网络、merge网络搭建训练，评测结果脚本，制作PPT、写报告   |
+|   向东伟   |   阅读论文，rstp网络、abcnn网络搭建训练、制作PPT、写报告   |
+|   胡煜章   |   阅读论文，数据预处理，训练词向量，制作并讲演PPT，写报告   |
+|   宋煦   |   阅读论文，abcnn网络搭建训练、制作PPT、写报告   |
 
 ### 编译运行环境
 
@@ -52,15 +52,15 @@ TensorFlow 1.12.0
 
 利用以TensorFlow作为后端的Keras生成网络模型。模型输入为问题和文档的句子id序列`[X_train_Q, X_train_A]`，经过词嵌入层 *Embedding* 的处理之后，转化为300维的词向量。
 
-
-
-### 输出结果
-
 ## 网络模型
 
 我们分别复现了3篇论文中的模型，并且加上了一些自己的修改。
 
 ### NaÏve CNN
+
+这个模型只是简单的一维卷积CNN网络，目的在于验证我们的词向量以及提供一个基础的baseline。
+
+<img src='cnn.png' width='50%' />
 
 ### CNN(RSTP)
 
@@ -108,21 +108,27 @@ ABCNN的基础是BCNN，它的结构类似于之前的RSTP，是两个句子分�
 
 不过这个模型效果最好的是只实现输入增加注意力。我们认为当两边都增加注意力时，表现反而下降的原因是过分强调了句间关联和短语位置。当我们求取句间关联矩阵A的效果不佳或不完善时，就很可能对系统引入虚假信息，造成负面影响。但是基于注意力对网络进一步改进是很有前景的。
 
-### LSTM with Attention
+### RNN with Attention
+
+在CNN之外，我们还尝试使用了rnn相关的网络结构。初始，我们考虑将这个任务看作与上一个任务相似的语义连贯问题，采用上次作业使用的Hierarchical attention networks for document classification中的结构进行尝试，但是效果并没有想象中的好。我们分析认为是虽然正确答案一定与问题相连贯，但其他错误答案描述的也是与问题中相关的概念，也具有较强的相关性，直接作为语义连贯问题并不能很好的进行区分。因此，我们随后继续采用将问题与答案分开处理，同样使用attention结构来处理这个问题。但是这种方法感觉对两边的关键词匹配还是有所缺乏，导致效果不如ABCNN好。
+
+<img src='rnn.png' width='50%' />
+
+### Merge Model
+
+正如我们之前所分析的那样，在这个问答系统的任务中，不同的网络结构侧重的点不同，为了能够将不同model的优点结合起来，我们设计了我们最终的模型，即将RNN与CNN获得的feature concate起来，同时在RNN部分我们也借鉴了之前使用的QA间相似度的概念，通过矩阵运算得到一个相似度并将其加入网络中，其具体结构如下，我们通过这个model取得了较好的性能。
+
+<img src='merge.png' width='100%' />
 
 ### 验证集上的性能
 
-| 模型                | 参数 | MAP  | MRR  | 代码(code/)          | 参考文献                                                     |
-| ------------------- | ---- | ---- | ---- | -------------------- | ------------------------------------------------------------ |
-| naïve CNN           |      |      |      | cnn.py               |                                                              |
-| CNN(RSTP)           |      |      |      | rstp.py              | Learning to rank short text pairs with convolutional deep neural networks^[1]^ |
-| ABCNN               |      |      |      | abcnn.py/abcnn_v2.py | ABCNN: Attention-based convolutional neural network for modeling sentence pairs^[2]^ |
-| LSTM with Attention |      |      |      |                      | Hierarchical attention networks for document classification^[3]^ |
-| Combined Model      |      |      |      |                      |                                                              |
-|                     |      |      |      |                      |                                                              |
-|                     |      |      |      |                      |                                                              |
-|                     |      |      |      |                      |                                                              |
-|                     |      |      |      |                      |                                                              |
+| 模型                | MAP  | MRR  | 代码(code/)          | 参考文献                                                     |
+| ------------------- | ---- | ---- | -------------------- | ------------------------------------------------------------ |
+| naïve CNN           |   0.481   |   0.479   | [cnn.py](../code/cnn.py)             |                                                              |
+| CNN(RSTP)           |   0.543   |   0.552   | [rstp.py](../code/rstp.py)              | Learning to rank short text pairs with convolutional deep neural networks^[1]^ |
+| ABCNN               |   0.715   |   0.723   | [abcnn.py](../code/abcnn.py)| ABCNN: Attention-based convolutional neural network for modeling sentence pairs^[2]^ |
+| LSTM with Attention |   0.607   |   0.613   |               [rnn.py](../code/rnn.py)       | Hierarchical attention networks for document classification^[3]^ |
+| Merge Model      |   0.822   |   0.824   |      [merge.py](../code/merge.py)                |                                                              
 
 ## 参考文献
 

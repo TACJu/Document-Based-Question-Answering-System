@@ -4,6 +4,7 @@ import keras
 from keras.models import Sequential, Model
 from keras.layers import Input, Embedding, Dense, Flatten, Conv1D, MaxPooling1D
 from keras.callbacks import ModelCheckpoint
+from keras.utils import plot_model
 
 #os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
@@ -23,6 +24,7 @@ def build_model(embedding_matrix):
     preds = Dense(1, activation='sigmoid')(x)
 
     model = Model(sequence_input, preds)
+    plot_model(model, to_file='./net_structure/cnn.png')
     return model
 
 if __name__ == "__main__":
