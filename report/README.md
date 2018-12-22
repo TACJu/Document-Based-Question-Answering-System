@@ -15,7 +15,7 @@ Repo链接为：https://github.com/TACJu/Document-Based-Question-Answering-Syste
 |   何炬   |   阅读论文，rnn网络、merge网络搭建训练，评测结果脚本，制作PPT、写报告   |
 |   向东伟   |   阅读论文，rstp网络、abcnn网络搭建训练、制作PPT、写报告   |
 |   胡煜章   |   阅读论文，数据预处理，训练词向量，制作并讲演PPT，写报告   |
-|   宋煦   |   阅读论文，abcnn网络搭建训练、制作PPT、写报告   |
+|   宋煦   |   阅读论文，abcnn网络搭建训练、评测结果统计数据，制作PPT，写报告   |
 
 ### 编译运行环境
 
@@ -51,6 +51,10 @@ TensorFlow 1.12.0
 ### 训练模型
 
 利用以TensorFlow作为后端的Keras生成网络模型。模型输入为问题和文档的句子id序列`[X_train_Q, X_train_A]`，经过词嵌入层 *Embedding* 的处理之后，转化为300维的词向量。
+
+### 评测模型
+
+因为提供的评测工具只能在windows上运行，为了方便在Mac以及Linux环境下的使用，我们在[inference.py](../code/inference.py)中实现了对mrr的评测，可以用来方便的评估模型的好坏。
 
 ## 网络模型
 
