@@ -68,7 +68,7 @@ TensorFlow 1.12.0
 
 ### 评测模型
 
-因为提供的评测工具只能在windows上运行，为了方便在Mac以及Linux环境下的使用，我们在[inference.py](../code/inference.py)中实现了对mrr的评测，可以用来方便的评估模型的好坏。
+因为提供的评测工具只能在windows上运行，为了方便在Mac以及Linux环境下的使用，我们在[inference.py](./code/inference.py)中实现了对mrr的评测，可以用来方便的评估模型的好坏。
 
 ## 网络模型
 
@@ -78,17 +78,17 @@ TensorFlow 1.12.0
 
 这个模型只是简单的一维卷积CNN网络，目的在于验证我们的词向量以及提供一个基础的baseline。
 
-<img src='cnn.png' width='50%' />
+<img src='./picture/cnn.png' width='50%' />
 
 ### CNN(RSTP)
 
 这个模型结构参考的是Learning to rank short text pairs with convolutional deep neural networks。首先使用一个典型的CNN结构对整个句子的词向量矩阵进行处理，首先使用宽度为m的窗口进行一维宽卷积，进行宽卷积能够让句子首尾的词被访问的频率增加。然后将卷积之后的feature map池化为一维向量。
 
-<img src="RSTP1.jpg" width="50%" />
+<img src="./picture/RSTP1.jpg" width="50%" />
 
 本模型使用上述的CNN结构对问题和文档进行相同的处理，得到两个向量$x_d,x_q$。然后计算这两个向量的相似度$x_{sim} = x_d^TMx_q$，M是一个由网络学习得到的参数矩阵。将$x_d,x_{sim},x_q$与额外的特征合并为一个向量作为最后全连接层的输入。
 
-<img src="RSTP2.jpg" width="90%" />
+<img src="./picture/RSTP2.jpg" width="90%" />
 
 我们认为这个简单粗暴的模型有效的原因是：它没有直接计算query和document之间的余弦距离，而是多用了一个参数矩阵M。这种计算相似度的方式可以看作是将$x_d$映射成为$x_d^T=Mx_d$，再让$x_d,x_q$之间计算相似度。
 
@@ -104,21 +104,21 @@ TensorFlow 1.12.0
 
 ABCNN的基础是BCNN，它的结构类似于之前的RSTP，是两个句子分开进行处理，最后进行合并的。区别在于ABCNN有两个卷积、池化的过程，且最后通过平均池化将整句缩小到一个词向量长度。这两个最终表示被拼接起来送入一个logistic回归中来得到结果。在我们的BCNN设计中，借鉴了RSTP的结构引入了最后的输入$x_{sim}$一并传入回归，回归使用了两个全连接层。这个基本框架的表现与RSTP比较接近。
 
-<img src="ABCNN1.jpg" width="50%" />
+<img src="./picture/ABCNN1.jpg" width="50%" />
 
 我们首先的工作是在BCNN的第一个卷积层之前加入Attention层。Attention层可以通过对问题和回答表示的每个短语进行相关性比较得到，这个矩阵的长和宽分别是问题和回答句子的长度。事实上，这个矩阵中每个位置都表示了两个句子中各一个短语间的关系，它的值可以根据两个输入直接计算得出。
 
 我们要训练的是这个矩阵对应到下一层卷积输入的权值。这需要我们自行设计一个网络层，通过这个网络层的权与注意力矩阵A相乘，最终得到一个大小和输入句子相同的多维向量，这相当于是句子的另一个特征。Attention矩阵乘上这样的权值，得到的大小和输入是相同的，所以我们把两个Attention分别于对应的输入叠加，送到下一个卷积层中去。这一次的输入就考虑到了短语和另一个句子的相关性，具有了注意力的特点。这个模型的表现比之前的BCNN有很大提升，可以验证注意力机制确实非常有效。
 
-<img src="ABCNN2.jpg" width="100%" />
+<img src="./picture/ABCNN2.jpg" width="100%" />
 
 考虑到注意力不仅能加到输入中，其实也可以影响卷积的输出，我们把卷积得到的结果，按照和另一个句子结果的相关性重新做一个加权。这种想法也十分直观：如果某一个特征和另一个句子关系不大，那它当然很不可能是另一个句子的答案了。所以，我们用卷积得到的结果再次求取一个Attention矩阵，这次利用所得到的Attention矩阵来进行自定义池化。结果等同于池化后句子中的每个短语表示都是被注意力根据其重要性加权过的。
 
-<img src="ABCNN3.jpg" width="100%" />
+<img src="./picture/ABCNN3.jpg" width="100%" />
 
 将两种思路结合起来，并且将网络进行堆叠，我们得到了ABCNN的最终版本。
 
-<img src="ABCNN4.jpg" width="100%" />
+<img src="./picture/ABCNN4.jpg" width="100%" />
 
 但是最终版本的表现并不如只在输入增加注意力的版本性能好。
 
@@ -130,23 +130,23 @@ ABCNN的基础是BCNN，它的结构类似于之前的RSTP，是两个句子分�
 
 在CNN之外，我们还尝试使用了rnn相关的网络结构。初始，我们考虑将这个任务看作与上一个任务相似的语义连贯问题，采用上次作业使用的Hierarchical attention networks for document classification中的结构进行尝试，但是效果并没有想象中的好。我们分析认为是虽然正确答案一定与问题相连贯，但其他错误答案描述的也是与问题中相关的概念，也具有较强的相关性，直接作为语义连贯问题并不能很好的进行区分。因此，我们随后继续采用将问题与答案分开处理，同样使用attention结构来处理这个问题。但是这种方法感觉对两边的关键词匹配还是有所缺乏，导致效果不如ABCNN好。
 
-<img src='rnn.png' width='50%' />
+<img src='./picture/rnn.png' width='50%' />
 
 ### Merge Model
 
 正如我们之前所分析的那样，在这个问答系统的任务中，不同的网络结构侧重的点不同，为了能够将不同model的优点结合起来，我们设计了我们最终的模型，即将RNN与CNN获得的feature concate起来，同时在RNN部分我们也借鉴了之前使用的QA间相似度的概念，通过矩阵运算得到一个相似度并将其加入网络中，其具体结构如下，我们通过这个model取得了较好的性能。
 
-<img src='merge.png' width='100%' />
+<img src='./picture/merge.png' width='100%' />
 
 ### 验证集上的性能
 
 | 模型                | MAP  | MRR  | 代码(code/)          | 参考文献                                                     |
 | ------------------- | ---- | ---- | -------------------- | ------------------------------------------------------------ |
-| naïve CNN           |   0.481   |   0.479   | [cnn.py](../code/cnn.py)             |                                                              |
-| CNN(RSTP)           |   0.543   |   0.552   | [rstp.py](../code/rstp.py)              | Learning to rank short text pairs with convolutional deep neural networks^[1]^ |
-| ABCNN               |   0.715   |   0.723   | [abcnn.py](../code/abcnn.py)| ABCNN: Attention-based convolutional neural network for modeling sentence pairs^[2]^ |
-| LSTM with Attention |   0.607   |   0.613   |               [rnn.py](../code/rnn.py)       | Hierarchical attention networks for document classification^[3]^ |
-| Merge Model      |   0.822   |   0.824   |      [merge.py](../code/merge.py)                |                                                              
+| naïve CNN           |   0.481   |   0.479   | [cnn.py](./code/cnn.py)             |                                                              |
+| CNN(RSTP)           |   0.543   |   0.552   | [rstp.py](./code/rstp.py)              | Learning to rank short text pairs with convolutional deep neural networks^[1]^ |
+| ABCNN               |   0.715   |   0.723   | [abcnn.py](./code/abcnn.py)| ABCNN: Attention-based convolutional neural network for modeling sentence pairs^[2]^ |
+| LSTM with Attention |   0.607   |   0.613   |               [rnn.py](./code/rnn.py)       | Hierarchical attention networks for document classification^[3]^ |
+| Merge Model      |   0.822   |   0.824   |      [merge.py](./code/merge.py)                |                                                              
 
 ## 参考文献
 
