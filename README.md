@@ -35,12 +35,6 @@ These numbers are used for ranking all sentences in given document by toolkit.
 1. Mean Average Precision
 2. Mean Reciprocal Rank
 
-### Roadmap
-
-- [ ] Word embedding
-- [ ] Simple LSTM benchmark
-- [ ] ...
-
 ### Team members
 
 Ju He, Dongwei Xiang, Yuzhang Hu, Xu Song
