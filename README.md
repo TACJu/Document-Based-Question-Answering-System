@@ -146,7 +146,7 @@ ABCNN的基础是BCNN，它的结构类似于之前的RSTP，是两个句子分�
 | CNN(RSTP)           |   0.543   |   0.552   | [rstp.py](./code/rstp.py)              | Learning to rank short text pairs with convolutional deep neural networks^[1]^ |
 | ABCNN               |   0.715   |   0.723   | [abcnn.py](./code/abcnn.py)| ABCNN: Attention-based convolutional neural network for modeling sentence pairs^[2]^ |
 | LSTM with Attention |   0.607   |   0.613   |               [rnn.py](./code/rnn.py)       | Hierarchical attention networks for document classification^[3]^ |
-| Merge Model      |   0.822   |   0.824   |      [merge.py](./code/merge.py)                |                                                              
+| Merge Model      |   0.838   |   0.842   |      [merge.py](./code/merge.py)                |                                                              
 
 ## 参考文献
 

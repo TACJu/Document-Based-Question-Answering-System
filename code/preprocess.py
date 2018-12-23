@@ -7,15 +7,16 @@ zhPattern = re.compile(u'[\u4e00-\u9fa5]+')
 
 def process():
     
-    for phase in ['train', 'validation']:
-        input_name = '../data/raw_data/' + phase + '-set.data'
+    #for phase in ['train', 'validation']:
+    for phase in ['test']: 
+        input_name = '../raw_data/' + phase + '-set.data'
         output_Q_name = '../data/split_data/' + phase + '_Q.txt'
         output_A_name = '../data/split_data/' + phase + '_A.txt'
-        output_L_name = '../data/numpy_array/' + phase + '_label.npy'
+        #output_L_name = '../data/numpy_array/' + phase + '_label.npy'
         input_file =  open(input_name, 'r')
         output_Q = open(output_Q_name, 'w')
         output_A = open(output_A_name, 'w')
-        output_L = []
+        #output_L = []
         sum_count = 0
         count = 0
 
@@ -24,17 +25,17 @@ def process():
             if not line:
                 break
             sum_count += 1
-            if (len(line.split('\t')) != 3):
+            if (len(line.split('\t')) != 2):
                 print(line)
                 continue
             count += 1
             #print(count)
             Q = line.split('\t')[0]
             A = line.split('\t')[1]    
-            L = line.split('\t')[2]
-            if L.endswith('%'):
-                L = L[0]
-            L = int(L)
+            #L = line.split('\t')[2]
+            #if L.endswith('%'):
+            #    L = L[0]
+            #L = int(L)
 
             Q_cut = jieba.cut(Q)
             for word in Q_cut:
@@ -50,11 +51,11 @@ def process():
                     output_A.write(word + ' ')
             output_A.write('\n')
 
-            output_L.append(L)
+            #output_L.append(L)
         
-        output_L = np.array(output_L)
-        print(output_L.shape)
-        np.save(output_L_name, output_L)
+        #output_L = np.array(output_L)
+        #print(output_L.shape)
+        #np.save(output_L_name, output_L)
         input_file.close()
         output_Q.close()
         output_A.close()
@@ -118,7 +119,7 @@ def embedding():
     model.save('../model/new_word2vec.model')
 
 def inference():
-    model = word2vec.Word2Vec.load('../model/new_word2vec.model')
+    model = word2vec.Word2Vec.load('../model/new_ord2vec.model')
     outfile = open('../data/split_data/new_words.txt', 'w')
     d = []
     maxlen = 0
@@ -150,7 +151,7 @@ def inference():
     print(maxlen)
 
 def build_matrix():
-    file = open('../data/split_data/new_words.txt', 'r')
+    file = open('../data/split_data/words.txt', 'r')
     d = []
     d.append('')
     while True:
@@ -160,7 +161,8 @@ def build_matrix():
         d.append(line[:-1])
     file.close()
 
-    for phase in ['train', 'validation']:
+    #for phase in ['train', 'validation']:
+    for phase in ['test']:
         for mode in  ['Q', 'A']:
             index = []
             filename = '../data/split_data/' + phase + '_' + mode + '.txt'
@@ -183,7 +185,7 @@ def build_matrix():
                         word_count += 1
                 index.append(tmp)
             index = np.array(index)
-            savename = '../data/numpy_array/new_' + phase + '_' + mode + '_index.npy'
+            savename = '../data/numpy_array/' + phase + '_' + mode + '_index.npy'
             np.save(savename, index)
 
 def test():
@@ -191,7 +193,7 @@ def test():
     print(model.wv['年'])
 
 if __name__ == "__main__":
-    #process()
+    process()
     #cut()
     #cut_ori()
     #embedding()

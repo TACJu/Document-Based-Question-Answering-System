@@ -182,14 +182,13 @@ def merge():
     m2 = (m1 + s3) / 2
     m3 = (m1 + s3) / 2
     m4 = (s1 + s2 + s3 + s4) / 4
+    
     '''
-
     m1s = open('../data/result/m1.txt', 'w')
     for i in m1:
         m1s.write(str(i) + '\n')
     m1s.close()
 
-    '''
     m2s = open('../data/result/m2.txt', 'w')
     for i in m2:
         m2s.write(str(i) + '\n')
@@ -199,8 +198,9 @@ def merge():
     for i in m3:
         m3s.write(str(i) + '\n')
     m3s.close()
+    '''
 
-    m4s = open('../data/result/m4.txt', 'w')
+    m4s = open('../data/result/score.txt', 'w')
     for i in m4:
         m4s.write(str(i) + '\n')
     m4s.close()
